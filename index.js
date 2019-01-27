@@ -1,130 +1,39 @@
 var dust = require('dust')();
 var serand = require('serand');
 var utils = require('utils');
-var validators = require('validators');
-var form = require('form');
 
-dust.loadSource(dust.compile(require('./template'), 'accounts-reset'));
-
-var configs = {
-    password: {
-        find: function (context, source, done) {
-            done(null, $('input', source).val());
-        },
-        validate: function (context, data, value, done) {
-            validators.password(context.email, value, function (err, error) {
-                if (err) {
-                    return done(err);
-                }
-                if (error) {
-                    return done(null, error);
-                }
-                done(null, null, value);
-            });
-        },
-        update: function (context, source, error, value, done) {
-            $('input', source).val(value);
-            done()
-        },
-        render: function (ctx, form, data, value, done) {
-            done(null, {email: ctx.email});
-        }
-    }
-};
+dust.loadSource(dust.compile(require('./template'), 'accounts-confirm'));
 
 module.exports = function (ctx, container, options, done) {
     var sandbox = container.sandbox;
-    dust.render('accounts-reset', {id: container.id}, function (err, out) {
+    options = options || {};
+    dust.render('accounts-confirm', {
+        email: options.email
+    }, function (err, out) {
         if (err) {
             return done(err);
         }
-        var elem = sandbox.append(out);
-        var lform = form.create(elem, configs);
-        lform.render({
-            email: options.email
-        }, {}, function (err) {
-            if (err) {
-                return done(err);
+        sandbox.append(out);
+        $.ajax({
+            method: 'PUT',
+            url: utils.resolve('accounts:///apis/v/users/' + options.user),
+            headers: {
+                'X-OTP': options.otp,
+                'X-Action': 'confirm'
+            },
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function () {
+                serand.direct('/signin');
+            },
+            error: function (xhr, status, err) {
+                console.error(err || status || xhr);
             }
-            var reset = $('.reset', elem);
-            sandbox.on('click', '.reset', function (e) {
-                lform.find(function (err, data) {
-                    if (err) {
-                        return console.error(err);
-                    }
-                    lform.validate(data, function (err, errors, data) {
-                        if (err) {
-                            return console.error(err);
-                        }
-                        if (errors) {
-                            lform.update(errors, data, function (err) {
-                                if (err) {
-                                    return console.error(err);
-                                }
-                                reset.removeAttr('disabled');
-                            });
-                            return;
-                        }
-                        lform.update(errors, data, function (err) {
-                            if (err) {
-                                return console.error(err);
-                            }
-                            lform.create(data, function (err, errors, data) {
-                                if (err) {
-                                    return console.error(err);
-                                }
-                                if (errors) {
-                                    lform.update(errors, data, function (err) {
-                                        if (err) {
-                                            return console.error(err);
-                                        }
-                                        reset.removeAttr('disabled');
-                                    });
-                                    return;
-                                }
-                                update(options.user, options.otp, data.password, function (err) {
-                                    if (err) {
-                                        return console.error(err);
-                                    }
-                                    serand.direct('/signin');
-                                });
-                            });
-                        });
-                    });
-                });
-                return false;
-            });
-            done(null, {
-                clean: function () {
+        });
+        done(null, {
+            clean: function () {
 
-                },
-                ready: function () {
-
-                }
-            });
+            }
         });
     });
 };
-
-var update = function (user, otp, password, done) {
-    $.ajax({
-        method: 'PUT',
-        url: utils.resolve('accounts:///apis/v/users/' + user),
-        data: JSON.stringify({
-            password: password
-        }),
-        headers: {
-            'X-OTP': otp,
-            'X-Action': 'reset'
-        },
-        contentType: 'application/json',
-        dataType: 'json',
-        success: function () {
-            done();
-        },
-        error: function (xhr, status, err) {
-            done(err || status || xhr);
-        }
-    });
-};
-

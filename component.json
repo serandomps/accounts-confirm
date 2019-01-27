@@ -15,8 +15,6 @@
   "dependencies": {
     "serandomps/dust": "master",
     "serandomps/serand": "master",
-    "serandomps/utils": "master",
-    "serandomps/form": "master",
-    "serandomps/validators": "master"
+    "serandomps/utils": "master"
   }
 }
