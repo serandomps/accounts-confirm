@@ -24,7 +24,7 @@ module.exports = function (ctx, container, options, done) {
             contentType: 'application/json',
             dataType: 'json',
             success: function () {
-                serand.direct('/signin');
+                serand.redirect('/signin');
             },
             error: function (xhr, status, err) {
                 console.error(err || status || xhr);
